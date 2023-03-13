@@ -1465,15 +1465,15 @@ Promise.map( [p1,p2,p3], function(pr,done){
 
 1.  迭代消息传递
 
-```
-function *foo(x) {
- var y = x * (yield);
- return y;
+```javascript
+function* foo(x) {
+    var y = x * (yield);
+    return y;
 }
-var it = foo( 6 );
+var it = foo(6);
 // 启动foo(..)
 it.next();
-var res = it.next( 7 );
+var res = it.next(7);
 res.value; // 42
 // 首先，传入 6 作为参数 x。然后调用 it.next()，这会启动 *foo(..)。 在 *foo(..) 内部，开始执行语句 var y = x ..，但随后就遇到了一个 yield 表达式。它
 //就会在这一点上暂停 *foo(..)（在赋值语句中间！），并在本质上要求调用代码为 yield
@@ -1486,15 +1486,15 @@ res.value; // 42
 
 2.  双向消息传递系统
 
-```
-function *foo(x) {
- var y = x * (yield "Hello"); // <-- yield一个值！
- return y;
+```javascript
+function* foo(x) {
+    var y = x * (yield "Hello"); // <-- yield一个值！
+    return y;
 }
-var it = foo( 6 );
+var it = foo(6);
 var res = it.next(); // 第一个next()，并不传入任何东西
 res.value; // "Hello"
-res = it.next( 7 ); // 向等待的yield传入7
+res = it.next(7); // 向等待的yield传入7
 res.value; // 42
 // 在生成器的起始处我们调用第一个 next() 时，还没有暂停的 yield 来接受这样一个值
 // 启动生成器时一定要用不带参数的 next()
@@ -1508,23 +1508,23 @@ res.value; // 42
 
 手写迭代器
 
-```
-var something = (function(){
- var nextVal;
- return {
- // for..of循环需要
- [Symbol.iterator]: function(){ return this; },  // 实现这个就可以通过for of迭代
- // 标准迭代器接口方法
- next: function(){
- if (nextVal === undefined) {
- nextVal = 1;
- }
- else {
- nextVal = (3 * nextVal) + 6;
- }
- return { done:false, value:nextVal };
- }
- };
+```javascript
+var something = (function () {
+    var nextVal;
+    return {
+        // for..of循环需要
+        [Symbol.iterator]: function () { return this; },  // 实现这个就可以通过for of迭代
+        // 标准迭代器接口方法
+        next: function () {
+            if (nextVal === undefined) {
+                nextVal = 1;
+            }
+            else {
+                nextVal = (3 * nextVal) + 6;
+            }
+            return { done: false, value: nextVal };
+        }
+    };
 })();
 ```
 
@@ -1534,7 +1534,7 @@ iterable（可迭代）：一个包含可以在其值上迭代的迭代器的对
 
 也可以手工调用这个函数，然后使用它返回的迭代器：
 
-```
+```javascript
 var a = [1,3,5,7,9];
 var it = a[Symbol.iterator]( "Symbol.iterator");
 it.next().value; // 1
@@ -1546,7 +1546,7 @@ it.next().value; // 5
 
 for..of 循环内的 break 会触发 finally 语句 ,也可以在外部通过 return(..) 手工终止生成器的迭代器实例
 
-```
+```javascript
 function *something() {
     try {
         var nextVal;
@@ -1586,7 +1586,7 @@ for (var v of it) {
 
 实现顺序同步：
 
-```
+```javascript
 function foo(x,y) {
     ajax(
         "http://some.url.1/?x=" + x + "&y=" + y,
@@ -1618,24 +1618,24 @@ it.next();
 
 同样可以实现同步错误处理
 
-```
-function *main() {
- var x = yield "Hello World";
- yield x.toLowerCase(); // 引发一个异常！
+```javascript
+function* main() {
+    var x = yield "Hello World";
+    yield x.toLowerCase(); // 引发一个异常！
 }
 var it = main();
 it.next().value; // Hello World
 try {
- it.next( 42 );
+    it.next(42);
 }
 catch (err) {
- console.error( err ); // TypeError
+    console.error(err); // TypeError
 }
 ```
 
 ### 4.4 生成器+Promise
 
-```
+```javascript
 function foo(x,y) {
  return request(
  "http://some.url.1/?x=" + x + "&y=" + y
@@ -1665,40 +1665,40 @@ p.then(
 
 支持 Promise 的 Generator Runner：
 
-```
+```javascript
 // 在此感谢Benjamin Gruenbaum （@benjamingr on GitHub）的巨大改进！
 function run(gen) {
- var args = [].slice.call( arguments, 1), it;
- // 在当前上下文中初始化生成器
- it = gen.apply( this, args );
- // 返回一个promise用于生成器完成
- return Promise.resolve()
- .then( function handleNext(value){
- // 对下一个yield出的值运行
- var next = it.next( value );
- return (function handleResult(next){
- // 生成器运行完毕了吗？
- if (next.done) {
- return next.value;
- }
- // 否则继续运行
- else {
- return Promise.resolve( next.value )
- .then(
- // 成功就恢复异步循环，把决议的值发回生成器
- handleNext,
- // 如果value是被拒绝的 promise，
- // 就把错误传回生成器进行出错处理
- function handleErr(err) {
- return Promise.resolve(
- it.throw( err )
-    )
- .then( handleResult );
- }
- );
- }
- })(next);
- } );
+    var args = [].slice.call(arguments, 1), it;
+    // 在当前上下文中初始化生成器
+    it = gen.apply(this, args);
+    // 返回一个promise用于生成器完成
+    return Promise.resolve()
+        .then(function handleNext(value) {
+            // 对下一个yield出的值运行
+            var next = it.next(value);
+            return (function handleResult(next) {
+                // 生成器运行完毕了吗？
+                if (next.done) {
+                    return next.value;
+                }
+                // 否则继续运行
+                else {
+                    return Promise.resolve(next.value)
+                        .then(
+                            // 成功就恢复异步循环，把决议的值发回生成器
+                            handleNext,
+                            // 如果value是被拒绝的 promise，
+                            // 就把错误传回生成器进行出错处理
+                            function handleErr(err) {
+                                return Promise.resolve(
+                                    it.throw(err)
+                                )
+                                    .then(handleResult);
+                            }
+                        );
+                }
+            })(next);
+        });
 }
 ```
 
@@ -1706,29 +1706,29 @@ function run(gen) {
 
 Promise 所有的并发能力在生成器 +Promise 方法中都可以使用
 
-```
-function *foo() {
- // 让两个请求"并行"，并等待两个promise都决议
- var results = yield Promise.all( [
- request( "http://some.url.1" ),
- request( "http://some.url.2" )
- ] );
- var r1 = results[0];
- var r2 = results[1];
- var r3 = yield request(
- "http://some.url.3/?v=" + r1 + "," + r2
- );
- console.log( r3 );
+```javascript
+function* foo() {
+    // 让两个请求"并行"，并等待两个promise都决议
+    var results = yield Promise.all([
+        request("http://some.url.1"),
+        request("http://some.url.2")
+    ]);
+    var r1 = results[0];
+    var r2 = results[1];
+    var r3 = yield request(
+        "http://some.url.3/?v=" + r1 + "," + r2
+    );
+    console.log(r3);
 }
 // 使用前面定义的工具run(..)
-run( foo );
+run(foo);
 ```
 
 ### 4.5 生成器委托
 
 yield * 把迭代器实例控制（当前 *bar() 生成器的）委托给 / 转移到了这另一个 \*foo() 迭代器；
 
-```
+```javascript
 function* foo () {
     console.log('*foo() starting');
     yield 3;
@@ -1746,10 +1746,10 @@ function* bar () {
 var it = bar();
 console.log(it.next().value); // 1
 console.log(it.next().value); // 2
-console.log(it.next().value); // *foo()启动
+console.log(it.next().value); // *foo() starting
 // 3
 console.log(it.next().value); // 4
-console.log(it.next().value); // *foo()完成
+console.log(it.next().value); // *foo() finished
 // 5
 ```
 
@@ -1757,33 +1757,33 @@ yield * 暂停了迭代控制，而不是生成器控制。当你调用 *foo() �
 
 yield 委托的主要目的是代码组织，以达到与普通函数调用的对称。
 
-```
-function *foo() {
-    console.log( "inside *foo():", yield "B" );
-    console.log( "inside *foo():", yield "C" );
+```javascript
+function* foo() {
+    console.log("inside *foo():", yield "B");
+    console.log("inside *foo():", yield "C");
     return "D";
 }
-function *bar() {
-    console.log( "inside *bar():", yield "A" );
+function* bar() {
+    console.log("inside *bar():", yield "A");
     // yield委托！
-    console.log( "inside *bar():", yield *foo() );
-    console.log( "inside *bar():", yield "E" );
+    console.log("inside *bar():", yield* foo());
+    console.log("inside *bar():", yield "E");
     return "F";
 }
 var it = bar();
-console.log( "outside:", it.next().value );
+console.log("outside:", it.next().value);
 // outside: A
-console.log( "outside:", it.next( 1 ).value );
+console.log("outside:", it.next(1).value);
 // inside *bar(): 1
 // outside: B
-console.log( "outside:", it.next( 2 ).value );
+console.log("outside:", it.next(2).value);
 // inside *foo(): 2
 // outside: C
-console.log( "outside:", it.next( 3 ).value );
+console.log("outside:", it.next(3).value);
 // inside *foo(): 3
 // inside *bar(): D
 // outside: E
-console.log( "outside:", it.next( 4 x).value );
+console.log("outside:", it.next(4).value);
 // inside *bar(): 4
 // outside: F
 ```
@@ -1798,35 +1798,35 @@ console.log( "outside:", it.next( 4 x).value );
 
 yield 委托甚至并不要求必须转到另一个生成器，它可以转到一个非生成器的一般 iterable。
 
-```
-function *bar() {
-    console.log( "inside *bar():", yield "A" );
-// yield委托给非生成器！
-    console.log( "inside *bar():", yield *[ "B", "C", "D" ] );
-    console.log( "inside *bar():", yield "E" );
+```javascript
+function* bar() {
+    console.log("inside *bar():", yield "A");
+    // yield委托给非生成器！
+    console.log("inside *bar():", yield* ["B", "C", "D"]);
+    console.log("inside *bar():", yield "E");
     return "F";
 }
 var it = bar();
-console.log( "outside:", it.next().value );
+console.log("outside:", it.next().value);
 // outside: A
-console.log( "outside:", it.next( 1 ).value );
+console.log("outside:", it.next(1).value);
 // inside *bar(): 1
 // outside: B
-console.log( "outside:", it.next( 2 ).value );
+console.log("outside:", it.next(2).value);
 // outside: C
-console.log( "outside:", it.next( 3 ).value );
+console.log("outside:", it.next(3).value);
 // outside: D
-console.log( "outside:", it.next( 4 ).value );
+console.log("outside:", it.next(4).value);
 // inside *bar(): undefined
 // outside: E
-console.log( "outside:", it.next( 5 ).value );
+console.log("outside:", it.next(5).value);
 // inside *bar(): 5
 // outside: F
 ```
 
 异常也可以被委托
 
-```
+```javascript
 function *foo() {
     try {
         yield "B";
@@ -1875,7 +1875,7 @@ catch (err) {
 
 递归委托
 
-```
+```javascript
 function *foo(val) {
     if (val > 1) {
         // 生成器递归
@@ -1899,19 +1899,19 @@ function *bar() {
 
 形实转换程序（thunk）：JavaScript 中的 thunk 是指一个用于调用另外一个函数的函数，没有任何参数
 
-```
-function foo(x,y,cb) {
- setTimeout( function(){
- cb( x + y );
- }, 1000 );
+```javascript
+function foo(x, y, cb) {
+    setTimeout(function () {
+        cb(x + y);
+    }, 1000);
 }
 function fooThunk(cb) {
- foo( 3, 4, cb );
+    foo(3, 4, cb);
 }
 // 将来
-fooThunk( function(sum){
- console.log( sum ); // 7
-} );
+fooThunk(function (sum) {
+    console.log(sum); // 7
+});    
 ```
 
 ## 第 5 章 程序性能
@@ -1972,4 +1972,4 @@ Web Worker 通常应用于哪些方面呢?
 
 尾调用优化（TCO）：不需要创建一个新的栈帧，而是可以重用已 有的 bar(..) 的栈帧。这样不仅速度更快，也更节省内存
 
-TCO 允许一个函数在结尾处调用另外一个函数来执行，不需要任何额外资源。这 意味着，对递归算法来说，引擎不再需要限制栈深度。
+TCO 允许一个函数在结尾处调用另外一个函数来执行，不需要任何额外资源。这意味着，对递归算法来说，引擎不再需要限制栈深度。
